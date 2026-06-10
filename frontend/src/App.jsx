@@ -188,24 +188,76 @@ export default function APIVault() {
   // import
   const [importText, setImportText] = useState("");
   const fileRef = useRef(null);
+  // auth / kilit
+  const [phase, setPhase] = useState("loading"); // loading | down | setup | locked | ready
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [authErr, setAuthErr] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
 
-  // ---- load
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/vault`);
-        if (!res.ok) throw new Error("backend yanıt vermedi");
-        const data = await res.json();
-        setEntries(data.entries || []);
-        setEnvPath(data.env_path || "");
-        setPersists(true);
-      } catch {
-        setPersists(false); // backend kapalı — sadece bu oturum
-      } finally {
-        setLoaded(true);
-      }
-    })();
-  }, []);
+  // ---- durum kontrolü (kilit/parola)
+  const checkStatus = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/status`);
+      if (!res.ok) throw new Error();
+      const s = await res.json();
+      setEnvPath(s.env_path || "");
+      if (!s.initialized) setPhase("setup");
+      else if (s.locked) setPhase("locked");
+      else { await loadVault(); setPhase("ready"); }
+    } catch {
+      setPhase("down"); // backend kapalı
+    }
+  };
+
+  const loadVault = async () => {
+    const res = await fetch(`${API_BASE}/api/vault`);
+    if (res.status === 423) { setPhase("locked"); return; }
+    const data = await res.json();
+    setEntries(data.entries || []);
+    setEnvPath(data.env_path || "");
+    setLoaded(true);
+    setPersists(true);
+  };
+
+  useEffect(() => { checkStatus(); }, []);
+
+  const doSetup = async () => {
+    setAuthErr("");
+    if (pw.length < 6) return setAuthErr("Parola en az 6 karakter olmalı");
+    if (pw !== pw2) return setAuthErr("Parolalar eşleşmiyor");
+    setAuthBusy(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/setup`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "kurulum başarısız");
+      setPw(""); setPw2("");
+      await loadVault(); setPhase("ready");
+    } catch (e) { setAuthErr(String(e.message || e)); }
+    finally { setAuthBusy(false); }
+  };
+
+  const doUnlock = async () => {
+    setAuthErr(""); setAuthBusy(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/unlock`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw }),
+      });
+      if (res.status === 401) throw new Error("Yanlış parola");
+      if (!res.ok) throw new Error("açılamadı");
+      setPw("");
+      await loadVault(); setPhase("ready");
+    } catch (e) { setAuthErr(String(e.message || e)); }
+    finally { setAuthBusy(false); }
+  };
+
+  const doLock = async () => {
+    try { await fetch(`${API_BASE}/api/lock`, { method: "POST" }); } catch {}
+    setEntries([]); setLoaded(false); setPhase("locked");
+  };
 
   const persist = async (next) => {
     setEntries(next);
@@ -215,9 +267,8 @@ export default function APIVault() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entries: next }),
       });
+      if (res.status === 423) { setPhase("locked"); return; }
       if (!res.ok) throw new Error();
-      const data = await res.json();
-      if (data.env_path) setEnvPath(data.env_path);
       setPersists(true);
     } catch {
       setPersists(false);
@@ -262,6 +313,18 @@ export default function APIVault() {
     a.href = url; a.download = ".env"; a.click();
     URL.revokeObjectURL(url);
     notify(".env indirildi");
+  };
+
+  const exportToDisk = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/export-env`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (res.status === 423) { setPhase("locked"); return; }
+      const data = await res.json();
+      notify(`diske yazıldı: ${data.path}`);
+    } catch { notify("yazılamadı — backend kapalı olabilir"); }
   };
 
   const parseImport = (text) => {
@@ -311,6 +374,53 @@ export default function APIVault() {
     </button>
   );
 
+  // ---- Kilit / parola ekranları --------------------------------------
+  const authShell = (children) => (
+    <div style={{ fontFamily: sans, background: "#070a12", minHeight: "100vh", color: "#cbd5e1", backgroundImage: grid, backgroundSize: "44px 44px", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ width: "100%", maxWidth: 380, border: `1px solid ${AMBER}33`, borderRadius: 14, background: "#0c1018ee", padding: "28px 26px", boxShadow: `0 0 50px ${AMBER}10` }}>
+        <h1 style={{ fontFamily: mono, fontSize: 22, fontWeight: 700, color: "#f8fafc", margin: "0 0 4px", letterSpacing: -0.5 }}>
+          ANAHTAR<span style={{ color: AMBER }}>://</span>KASA
+        </h1>
+        {children}
+      </div>
+    </div>
+  );
+
+  const pwInput = (val, set, ph, onEnter) => (
+    <input type="password" value={val} onChange={(e) => set(e.target.value)}
+      onKeyDown={(e) => e.key === "Enter" && onEnter()} placeholder={ph} autoFocus={ph.includes("Master")}
+      style={{ width: "100%", boxSizing: "border-box", padding: "11px 14px", background: "#060911", border: "1px solid #1e2738", borderRadius: 9, color: "#e2e8f0", fontFamily: mono, fontSize: 14, outline: "none", marginBottom: 10 }} />
+  );
+
+  if (phase === "loading") return authShell(<p style={{ fontFamily: mono, fontSize: 13, color: "#64748b", marginTop: 14 }}>// bağlanılıyor...</p>);
+
+  if (phase === "down") return authShell(
+    <div>
+      <p style={{ fontFamily: mono, fontSize: 13, color: "#ef4444", margin: "14px 0 6px" }}>// backend kapalı</p>
+      <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.6, margin: "0 0 16px" }}>FastAPI çalışmıyor. Terminalde <code style={{ color: "#a5f3fc", fontFamily: mono }}>./baslat.sh</code> ile başlat, sonra tekrar dene.</p>
+      <button onClick={() => { setPhase("loading"); checkStatus(); }} style={{ padding: "10px 16px", borderRadius: 9, border: `1px solid ${AMBER}55`, background: AMBER + "18", color: AMBER, fontFamily: mono, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>↻ tekrar dene</button>
+    </div>
+  );
+
+  if (phase === "setup") return authShell(
+    <div>
+      <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.6, margin: "10px 0 18px" }}>İlk kurulum — kasanı şifrelemek için bir <b style={{ color: "#e2e8f0" }}>master parola</b> belirle. Bu parola unutulursa kasa açılamaz, kurtarma yoktur.</p>
+      {pwInput(pw, setPw, "Master parola (min 6)", doSetup)}
+      {pwInput(pw2, setPw2, "Parolayı tekrarla", doSetup)}
+      {authErr && <p style={{ fontFamily: mono, fontSize: 12, color: "#ef4444", margin: "2px 0 10px" }}>{authErr}</p>}
+      <button onClick={doSetup} disabled={authBusy} style={{ width: "100%", padding: "11px", borderRadius: 9, border: "none", background: AMBER, color: "#0d0f16", fontFamily: mono, fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 4 }}>{authBusy ? "kuruluyor..." : "🔐 kasayı oluştur"}</button>
+    </div>
+  );
+
+  if (phase === "locked") return authShell(
+    <div>
+      <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.6, margin: "10px 0 18px" }}>Kasa kilitli. Açmak için master parolanı gir.</p>
+      {pwInput(pw, setPw, "Master parola", doUnlock)}
+      {authErr && <p style={{ fontFamily: mono, fontSize: 12, color: "#ef4444", margin: "2px 0 10px" }}>{authErr}</p>}
+      <button onClick={doUnlock} disabled={authBusy} style={{ width: "100%", padding: "11px", borderRadius: 9, border: "none", background: AMBER, color: "#0d0f16", fontFamily: mono, fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 4 }}>{authBusy ? "açılıyor..." : "🔓 kilidi aç"}</button>
+    </div>
+  );
+
   return (
     <div style={{ fontFamily: sans, background: "#070a12", minHeight: "100vh", color: "#cbd5e1", backgroundImage: grid, backgroundSize: "44px 44px" }}>
       <div style={{ maxWidth: 880, margin: "0 auto", padding: "26px 16px 60px" }}>
@@ -322,6 +432,11 @@ export default function APIVault() {
             <span style={{ width: 9, height: 9, borderRadius: 99, background: AMBER }} />
             <span style={{ width: 9, height: 9, borderRadius: 99, background: "#22c55e" }} />
             <span style={{ fontFamily: mono, fontSize: 11, color: "#475569", marginLeft: 6, letterSpacing: 1 }}>~/api-vault</span>
+            <div style={{ flex: 1 }} />
+            <button onClick={doLock} title="Kasayı kilitle"
+              style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid #1e2738", background: "#0c1018", color: "#94a3b8", fontFamily: mono, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              🔒 kilitle
+            </button>
           </div>
           <h1 style={{ fontFamily: mono, fontSize: 25, fontWeight: 700, color: "#f8fafc", margin: 0, letterSpacing: -0.5 }}>
             ANAHTAR<span style={{ color: AMBER }}>://</span>KASA
@@ -329,9 +444,8 @@ export default function APIVault() {
           <p style={{ fontFamily: mono, fontSize: 12, color: "#64748b", marginTop: 8, lineHeight: 1.7 }}>
             <span style={{ color: AMBER }}>{entries.length}</span> kayıt · <span style={{ color: "#22c55e" }}>{filled}</span> dolu key ·
             {persists
-              ? <span style={{ color: "#22c55e" }}> backend bağlı · .env diske yazılıyor</span>
+              ? <span style={{ color: "#22c55e" }}> 🔐 şifreli · vault.enc</span>
               : <span style={{ color: "#ef4444" }}> backend kapalı — değişiklikler kaydedilmiyor</span>}
-            {envPath && <><br /><span style={{ color: "#475569" }}>{envPath}</span></>}
           </p>
         </div>
 
@@ -519,12 +633,13 @@ export default function APIVault() {
         {view === "io" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <div style={{ border: "1px solid #16202f", borderRadius: 11, background: "#0b0f18", padding: "16px 18px" }}>
-              <div style={{ fontFamily: mono, fontSize: 11, color: "#22c55e", marginBottom: 10, letterSpacing: 0.5 }}>// dışa aktar — yeni projeye taşı</div>
+              <div style={{ fontFamily: mono, fontSize: 11, color: "#22c55e", marginBottom: 10, letterSpacing: 0.5 }}>// dışa aktar — düz metin .env üret</div>
               <p style={{ fontSize: 13, color: "#94a3b8", margin: "0 0 12px", lineHeight: 1.6 }}>
-                Dolu key'leri gerçek bir <code style={{ color: "#a5f3fc", fontFamily: mono }}>.env</code> dosyası olarak indir, yeni projenin köküne koy, <code style={{ color: "#a5f3fc", fontFamily: mono }}>.gitignore</code>'a ekle. Boş key'ler yorum satırı olarak iner.
+                Kasa şifreli durur; <code style={{ color: "#a5f3fc", fontFamily: mono }}>.env</code> yalnızca burada <b style={{ color: "#e2e8f0" }}>açıkça</b> ürettiğinde diske yazılır. İndir ya da <code style={{ color: "#a5f3fc", fontFamily: mono }}>~/.apikasa/.env</code>'e yaz, projene koy, <code style={{ color: "#a5f3fc", fontFamily: mono }}>.gitignore</code>'a ekle. Terminalden istersen: <code style={{ color: "#a5f3fc", fontFamily: mono }}>apikasa export &gt; .env</code>
               </p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button onClick={downloadEnv} disabled={!entries.length} style={{ padding: "9px 16px", borderRadius: 8, border: "1px solid #22c55e55", background: "#052e16", color: "#4ade80", fontFamily: mono, fontSize: 12.5, fontWeight: 600, cursor: entries.length ? "pointer" : "default" }}>↓ .env indir</button>
+                <button onClick={exportToDisk} disabled={!entries.length} style={{ padding: "9px 16px", borderRadius: 8, border: `1px solid ${AMBER}55`, background: AMBER + "18", color: AMBER, fontFamily: mono, fontSize: 12.5, fontWeight: 600, cursor: entries.length ? "pointer" : "default" }}>⤓ ~/.apikasa/.env'e yaz</button>
                 <button onClick={() => copy(buildEnv(), "envall")} disabled={!entries.length} style={{ padding: "9px 16px", borderRadius: 8, border: "1px solid #1e2738", background: "#121a28", color: copied === "envall" ? "#4ade80" : "#94a3b8", fontFamily: mono, fontSize: 12.5, fontWeight: 600, cursor: entries.length ? "pointer" : "default" }}>{copied === "envall" ? "✓ kopyalandı" : "⧉ panoya kopyala"}</button>
               </div>
               {entries.length > 0 && (
@@ -551,8 +666,8 @@ export default function APIVault() {
         {/* security footer */}
         <div style={{ marginTop: 22, border: "1px solid #16202f", borderRadius: 10, background: "#0b0f18", padding: "13px 17px" }}>
           <p style={{ margin: 0, fontFamily: mono, fontSize: 11, color: "#64748b", lineHeight: 1.9 }}>
-            <span style={{ color: AMBER }}>[depo]</span> key'ler lokal makinende <span style={{ color: "#a5f3fc" }}>~/.apikasa/.env</span> dosyasına yazılır, hiçbir buluta gitmez ·{" "}
-            <span style={{ color: AMBER }}>[bilinç]</span> bu uçtan uca şifreli bir kasa değildir, gerçek production sırları için bir secret manager kullan ·{" "}
+            <span style={{ color: AMBER }}>[şifreli]</span> kasa <span style={{ color: "#a5f3fc" }}>~/.apikasa/vault.enc</span>'de master parolayla şifreli durur, hiçbir buluta gitmez ·{" "}
+            <span style={{ color: AMBER }}>[parola]</span> master parola unutulursa kurtarma yoktur — güvenli bir yerde sakla ·{" "}
             <span style={{ color: AMBER }}>[git]</span> indirdiğin <span style={{ color: "#a5f3fc" }}>.env</span>'i her zaman <span style={{ color: "#a5f3fc" }}>.gitignore</span>'a ekle
           </p>
         </div>

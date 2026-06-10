@@ -1,30 +1,32 @@
 """
-ANAHTAR://KASA — Lokal FastAPI backend
-Kayıtları ~/.apikasa/ altında tutar:
-  • vault.json  → uygulamanın kaynağı (ad, kategori, env değişkeni, key)
-  • .env        → her kayıtta otomatik üretilen, diğer projelerin kullanacağı gerçek dosya
+ANAHTAR://KASA — Lokal FastAPI backend (şifreli sürüm)
+
+Kasa ~/.apikasa/vault.enc içinde ŞİFRELİ durur. Açmak için master parola gerekir.
+Düz metin .env yalnızca açıkça "dışa aktar" denince yazılır.
 
 Çalıştırma:
   uvicorn main:app --host 127.0.0.1 --port 8000
 """
-import os
-import json
-from pathlib import Path
-from datetime import datetime
-
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
-# ---- Kasa konumu (sabit merkezi yol) -----------------------------------
-VAULT_DIR = Path.home() / ".apikasa"
-VAULT_JSON = VAULT_DIR / "vault.json"
-ENV_FILE = VAULT_DIR / ".env"
-VAULT_DIR.mkdir(mode=0o700, exist_ok=True)
+import kasa_core as core
+
+app = FastAPI(title="ANAHTAR://KASA")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Tek kullanıcı, lokal: anahtarı bellekte tutarız (oturum boyunca)
+_session: dict = {"key": None}
 
 
-# ---- Modeller ----------------------------------------------------------
+# ---- Modeller ----
 class Entry(BaseModel):
     id: str
     name: str
@@ -37,84 +39,86 @@ class Vault(BaseModel):
     entries: list[Entry]
 
 
-# ---- Uygulama ----------------------------------------------------------
-app = FastAPI(title="ANAHTAR://KASA")
-
-# Sadece lokal Vite arayüzüne izin ver
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+class PasswordIn(BaseModel):
+    password: str
 
 
-# ---- Yardımcılar -------------------------------------------------------
-def _secure(path: Path) -> None:
-    """Dosyayı sadece sahibinin okuyabileceği şekilde işaretle (0600)."""
-    try:
-        os.chmod(path, 0o600)
-    except OSError:
-        pass  # Windows'ta sessizce geç
+class ExportIn(BaseModel):
+    path: str | None = None
 
 
-def load_entries() -> list[dict]:
-    if VAULT_JSON.exists():
-        try:
-            return json.loads(VAULT_JSON.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            return []
-    return []
+def _require_key() -> bytes:
+    if _session["key"] is None:
+        raise HTTPException(status_code=423, detail="Kasa kilitli")
+    return _session["key"]
 
 
-def build_env(entries: list[dict]) -> str:
-    """Kayıtlardan kategorilere ayrılmış bir .env metni üret."""
-    lines = [f"# ANAHTAR://KASA — {datetime.now():%Y-%m-%d %H:%M}", ""]
-    by_cat: dict[str, list[dict]] = {}
-    for e in entries:
-        by_cat.setdefault(e.get("cat", "Özel"), []).append(e)
-    for cat in sorted(by_cat):
-        lines.append(f"# ── {cat} ──")
-        for e in by_cat[cat]:
-            env, val = e["env"], e.get("val", "")
-            lines.append(f"{env}={val}" if val else f"# {env}=")
-        lines.append("")
-    return "\n".join(lines)
+# ---- Durum / parola ----
+@app.get("/api/status")
+def status():
+    return {
+        "initialized": core.is_initialized(),
+        "locked": _session["key"] is None,
+        "env_path": str(core.ENV_FILE),
+    }
 
 
-def save_all(entries: list[dict]) -> None:
-    VAULT_JSON.write_text(
-        json.dumps(entries, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    ENV_FILE.write_text(build_env(entries), encoding="utf-8")
-    _secure(VAULT_JSON)
-    _secure(ENV_FILE)
+@app.post("/api/setup")
+def setup(body: PasswordIn):
+    if core.is_initialized():
+        raise HTTPException(status_code=400, detail="Kasa zaten kurulu")
+    if len(body.password) < 6:
+        raise HTTPException(status_code=400, detail="Parola en az 6 karakter olmalı")
+    initial = core.migrate_plaintext()  # eski şifresiz veriyi taşı
+    _session["key"] = core.setup(body.password, initial)
+    return {"ok": True, "migrated": len(initial)}
 
 
-# ---- Uç noktalar -------------------------------------------------------
+@app.post("/api/unlock")
+def unlock(body: PasswordIn):
+    key = core.unlock(body.password)
+    if key is None:
+        raise HTTPException(status_code=401, detail="Yanlış parola")
+    _session["key"] = key
+    return {"ok": True}
+
+
+@app.post("/api/lock")
+def lock():
+    _session["key"] = None
+    return {"ok": True}
+
+
+# ---- Kasa ----
 @app.get("/api/vault")
 def get_vault():
-    """Tüm kayıtları ve .env dosyasının diskteki yolunu döndür."""
-    return {"entries": load_entries(), "env_path": str(ENV_FILE)}
+    key = _require_key()
+    return {"entries": core.load_entries(key), "env_path": str(core.ENV_FILE)}
 
 
 @app.put("/api/vault")
 def put_vault(vault: Vault):
-    """Tüm kaydı diske yaz (vault.json + .env)."""
+    key = _require_key()
     entries = [e.model_dump() for e in vault.entries]
-    save_all(entries)
-    return {"ok": True, "count": len(entries), "env_path": str(ENV_FILE)}
+    core.save_entries(entries, key)
+    return {"ok": True, "count": len(entries)}
 
 
 @app.get("/api/env", response_class=PlainTextResponse)
 def get_env():
-    """Ham .env içeriğini düz metin olarak döndür."""
-    return build_env(load_entries())
+    key = _require_key()
+    return core.build_env(core.load_entries(key))
+
+
+@app.post("/api/export-env")
+def export_env(body: ExportIn):
+    """Düz metin .env'i diske açıkça yaz (varsayılan ~/.apikasa/.env)."""
+    key = _require_key()
+    entries = core.load_entries(key)
+    path = core.write_env(entries, body.path or core.ENV_FILE)
+    return {"ok": True, "path": str(path)}
 
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "vault_dir": str(VAULT_DIR)}
+    return {"ok": True, "vault_dir": str(core.VAULT_DIR)}
