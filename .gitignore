@@ -1,0 +1,16 @@
+# Sırlar — asla commit etme
+.env
+*.env
+vault.json
+
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
