@@ -7,26 +7,114 @@ const sans = "'Inter',system-ui,sans-serif";
 const API_BASE = "http://localhost:8000";
 
 // Hızlı ekleme için kompakt katalog (ad + docs)
+// Katalog — [ad, docs, kısa açıklama, ücretsiz katman cömertliği 1-5]
 const CATALOG = [
-  { c: "AI / LLM", hue: "#a78bfa", items: [["Google Gemini", "https://aistudio.google.com"], ["Groq", "https://console.groq.com"], ["OpenRouter", "https://openrouter.ai"], ["Mistral AI", "https://console.mistral.ai"], ["Cohere", "https://cohere.com"], ["Cerebras", "https://cloud.cerebras.ai"], ["HuggingFace", "https://huggingface.co"]] },
-  { c: "Görsel / Video", hue: "#f472b6", items: [["Replicate", "https://replicate.com"], ["Cloudinary", "https://cloudinary.com"], ["remove.bg", "https://remove.bg/api"], ["Unsplash", "https://unsplash.com/developers"], ["Mux", "https://mux.com"], ["Shotstack", "https://shotstack.io"]] },
-  { c: "Ses", hue: "#fb7185", items: [["ElevenLabs", "https://elevenlabs.io"], ["Deepgram", "https://deepgram.com"]] },
-  { c: "Çeviri", hue: "#2dd4bf", items: [["DeepL", "https://deepl.com/pro-api"]] },
-  { c: "E-posta", hue: "#34d399", items: [["Resend", "https://resend.com"], ["Brevo", "https://brevo.com"], ["Mailgun", "https://mailgun.com"]] },
-  { c: "SMS / Bildirim", hue: "#f87171", items: [["OneSignal", "https://onesignal.com"], ["Twilio", "https://twilio.com"], ["Telegram Bot", "https://core.telegram.org/bots/api"]] },
-  { c: "Realtime", hue: "#22d3ee", items: [["Pusher", "https://pusher.com"], ["Ably", "https://ably.com"]] },
-  { c: "Harita / IP", hue: "#60a5fa", items: [["Mapbox", "https://mapbox.com"], ["OpenRouteService", "https://openrouteservice.org"]] },
-  { c: "Finans", hue: "#fbbf24", items: [["Alpha Vantage", "https://alphavantage.co"], ["Finnhub", "https://finnhub.io"], ["TCMB EVDS", "https://evds2.tcmb.gov.tr"]] },
-  { c: "Ödeme", hue: "#a3e635", items: [["iyzico", "https://iyzico.com"], ["Stripe", "https://stripe.com"]] },
-  { c: "Veritabanı", hue: "#c084fc", items: [["Supabase", "https://supabase.com"], ["Neon", "https://neon.tech"], ["Upstash", "https://upstash.com"], ["Turso", "https://turso.tech"]] },
-  { c: "Vektör / RAG", hue: "#818cf8", items: [["Pinecone", "https://pinecone.io"], ["Qdrant", "https://qdrant.tech"]] },
-  { c: "Depolama", hue: "#fdba74", items: [["Cloudflare R2", "https://developers.cloudflare.com/r2"], ["ImgBB", "https://api.imgbb.com"]] },
-  { c: "Auth", hue: "#4ade80", items: [["Clerk", "https://clerk.com"]] },
-  { c: "Doküman / OCR", hue: "#fb923c", items: [["OCR.space", "https://ocr.space"], ["PDF.co", "https://pdf.co"]] },
-  { c: "Analitik", hue: "#f0abfc", items: [["PostHog", "https://posthog.com"]] },
-  { c: "Güvenlik", hue: "#fca5a5", items: [["AbuseIPDB", "https://abuseipdb.com"]] },
-  { c: "Üretkenlik", hue: "#94a3b8", items: [["Notion", "https://developers.notion.com"], ["Airtable", "https://airtable.com/developers"], ["GitHub", "https://docs.github.com/rest"]] },
-  { c: "Açık Veri", hue: "#7dd3fc", items: [["NASA", "https://api.nasa.gov"], ["NewsAPI", "https://newsapi.org"]] },
+  { c: "AI / LLM", hue: "#a78bfa", items: [
+    ["Google Gemini", "https://aistudio.google.com", "1.500 istek/gün, 1M token bağlam — en cömert ücretsiz LLM", 5],
+    ["Groq", "https://console.groq.com", "Llama 3.3: 14.400 istek/gün, dünyanın en hızlı inference'ı", 5],
+    ["OpenRouter", "https://openrouter.ai", "Tek API ile 300+ model, bazıları :free ücretsiz", 4],
+    ["Mistral AI", "https://console.mistral.ai", "AB/GDPR dostu, Codestral kod modeli güçlü", 3],
+    ["Cohere", "https://cohere.com", "RAG + Rerank için optimize, 1.000 istek/ay trial", 3],
+    ["Cerebras", "https://cloud.cerebras.ai", "Groq rakibi, saniyede 1000+ token", 4],
+    ["HuggingFace", "https://huggingface.co", "Binlerce özel model: NLP, görüntü, ses", 3],
+  ] },
+  { c: "Görsel Üretim", hue: "#f472b6", items: [
+    ["Pollinations.ai", "https://pollinations.ai", "Sınırsız, key yok, img src olarak çalışır (Flux)", 5],
+    ["Replicate", "https://replicate.com", "Flux, SDXL, upscale, video — binlerce hazır model", 3],
+    ["Cloudinary", "https://cloudinary.com", "Görsel CDN + anlık dönüşüm, otomatik WebP/AVIF", 4],
+    ["remove.bg", "https://remove.bg/api", "Tek çağrıyla arka plan kaldırma, 50/ay", 2],
+    ["Unsplash", "https://unsplash.com/developers", "Ücretsiz yüksek kaliteli stok fotoğraf", 4],
+  ] },
+  { c: "Ses & Konuşma", hue: "#fb7185", items: [
+    ["Groq Whisper", "https://console.groq.com", "Whisper v3, çok hızlı, Türkçe transkripsiyon", 4],
+    ["ElevenLabs", "https://elevenlabs.io", "Sektör lideri TTS, 10.000 karakter/ay, TR sesli", 3],
+    ["Deepgram", "https://deepgram.com", "Canlı STT + konuşmacı ayrımı, $200 kredi", 4],
+  ] },
+  { c: "Video", hue: "#fca5a5", items: [
+    ["Mux", "https://mux.com", "Video yükleme, transcode, adaptif streaming + analitik", 3],
+    ["Shotstack", "https://shotstack.io", "JSON ile programatik video kurgu/render", 3],
+  ] },
+  { c: "Çeviri & Dil", hue: "#2dd4bf", items: [
+    ["DeepL", "https://deepl.com/pro-api", "En kaliteli çeviri, 500.000 karakter/ay, TR", 4],
+    ["LibreTranslate", "https://libretranslate.com", "Açık kaynak, self-host, gizli veri için", 5],
+    ["LanguageTool", "https://languagetool.org/http-api", "Dilbilgisi/yazım denetimi, TR destekli", 4],
+  ] },
+  { c: "E-posta", hue: "#34d399", items: [
+    ["Resend", "https://resend.com", "Modern email API, React şablon, 3.000/ay", 4],
+    ["Brevo", "https://brevo.com", "300/gün + sınırsız kontak, TR'de yaygın", 4],
+    ["Mailgun", "https://mailgun.com", "Email doğrulama + gelen mail yönlendirme", 3],
+  ] },
+  { c: "SMS & Bildirim", hue: "#f87171", items: [
+    ["Ntfy.sh", "https://ntfy.sh", "Sınırsız push, self-host, basit HTTP POST", 5],
+    ["OneSignal", "https://onesignal.com", "Çok kanallı push: web + mobil, 10K abone", 4],
+    ["Telegram Bot", "https://core.telegram.org/bots/api", "Bot ile sınırsız bildirim, bedava", 5],
+    ["Twilio", "https://twilio.com", "SMS, WhatsApp, OTP — TR'ye gönderir, ~$15 kredi", 2],
+  ] },
+  { c: "Sohbet & Realtime", hue: "#22d3ee", items: [
+    ["Pusher", "https://pusher.com", "Yönetilen WebSocket, 200K mesaj/gün", 3],
+    ["Ably", "https://ably.com", "Pusher rakibi, 6M mesaj/ay + mesaj geçmişi", 4],
+  ] },
+  { c: "Harita & Konum", hue: "#60a5fa", items: [
+    ["Mapbox", "https://mapbox.com", "Yüksek kalite harita, dark tema, 50K/ay", 4],
+    ["OpenRouteService", "https://openrouteservice.org", "Rota + mesafe matrisi, lojistik için, 2.000/gün", 4],
+    ["Nominatim (OSM)", "https://nominatim.org", "Açık kaynak geocoding, key yok", 4],
+  ] },
+  { c: "IP & Coğrafya", hue: "#38bdf8", items: [
+    ["ipapi.co", "https://ipapi.co", "IP→konum/para birimi/saat dilimi, 30K/ay", 4],
+    ["REST Countries", "https://restcountries.com", "Tüm ülke verisi: bayrak, para, dil — key yok", 5],
+  ] },
+  { c: "Finans & Borsa", hue: "#fbbf24", items: [
+    ["Yahoo Finance", "https://pypi.org/project/yfinance", "Hisse/tarihsel/kripto, sınırsız (unofficial)", 5],
+    ["Alpha Vantage", "https://alphavantage.co", "RSI/MACD hazır indikatörler, 25 istek/gün", 2],
+    ["Finnhub", "https://finnhub.io", "Canlı fiyat + haber + WebSocket, 60/dk", 4],
+    ["TCMB EVDS", "https://evds2.tcmb.gov.tr", "Merkez Bankası resmi: kur, faiz, enflasyon (TR)", 5],
+    ["Frankfurter", "https://frankfurter.dev", "ECB döviz kuru, sınırsız, key yok", 5],
+  ] },
+  { c: "Ödeme", hue: "#a3e635", items: [
+    ["iyzico", "https://iyzico.com", "Türkiye'nin yaygın altyapısı: kart, taksit, abonelik", 4],
+    ["Stripe", "https://stripe.com", "Global ödeme, en iyi geliştirici deneyimi", 4],
+  ] },
+  { c: "Veritabanı / Backend", hue: "#c084fc", items: [
+    ["Supabase", "https://supabase.com", "Postgres + auth + realtime + storage, 50K MAU", 4],
+    ["Neon", "https://neon.tech", "Serverless Postgres, Git-tarzı branching", 4],
+    ["Upstash", "https://upstash.com", "Serverless Redis: cache, rate limit, queue", 4],
+    ["Turso", "https://turso.tech", "Edge SQLite, aşırı cömert: 9GB, 500 DB", 5],
+    ["Firebase", "https://firebase.google.com", "NoSQL + auth + push, mobil için güçlü", 4],
+  ] },
+  { c: "Vektör / RAG", hue: "#818cf8", items: [
+    ["Pinecone", "https://pinecone.io", "En yaygın yönetilen vektör DB, RAG standardı", 3],
+    ["Qdrant", "https://qdrant.tech", "Açık kaynak, self-host, filtreli arama, 1GB", 4],
+  ] },
+  { c: "Depolama & CDN", hue: "#fdba74", items: [
+    ["Cloudflare R2", "https://developers.cloudflare.com/r2", "S3 uyumlu, çıkış (egress) ücreti YOK, 10GB", 4],
+    ["ImgBB", "https://api.imgbb.com", "Basit görsel barındırma, tek POST", 4],
+  ] },
+  { c: "Kimlik & Giriş", hue: "#4ade80", items: [
+    ["Clerk", "https://clerk.com", "Hazır giriş UI, MFA, sosyal login, 10K MAU", 4],
+    ["Supabase Auth", "https://supabase.com/auth", "Magic link, OAuth, RLS — Supabase ile gelir", 4],
+  ] },
+  { c: "Doküman & OCR", hue: "#fb923c", items: [
+    ["Gemini Doküman", "https://aistudio.google.com", "PDF→yapılandırılmış JSON, klasik OCR'dan akıllı", 5],
+    ["OCR.space", "https://ocr.space", "Görsel/PDF→metin, TR dahil, 25.000/ay", 4],
+    ["PDF.co", "https://pdf.co", "PDF üret/doldur/birleştir, HTML→PDF", 3],
+  ] },
+  { c: "Analitik", hue: "#f0abfc", items: [
+    ["PostHog", "https://posthog.com", "Ürün analitiği + funnel + flag + replay, 1M olay/ay", 4],
+    ["Plausible", "https://plausible.io", "Hafif, cookie'siz, gizlilik dostu web analitiği", 3],
+  ] },
+  { c: "Güvenlik", hue: "#fca5a5", items: [
+    ["Have I Been Pwned", "https://haveibeenpwned.com/API", "Şifre sızıntı kontrolü, k-anonymity", 4],
+    ["AbuseIPDB", "https://abuseipdb.com", "IP itibar skoru, spam/bot engelleme, 1.000/gün", 3],
+  ] },
+  { c: "Üretkenlik & Otomasyon", hue: "#94a3b8", items: [
+    ["Notion API", "https://developers.notion.com", "Notion DB'yi oku/yaz, hafif backend gibi", 5],
+    ["Airtable", "https://airtable.com/developers", "Tablo+DB karışımı, hafif CRM/içerik", 3],
+    ["GitHub API", "https://docs.github.com/rest", "Repo, issue, Actions tetikleme, 5.000/saat", 5],
+  ] },
+  { c: "Açık Veri", hue: "#7dd3fc", items: [
+    ["NASA", "https://api.nasa.gov", "Astronomi fotoğrafı, Mars, asteroit (DEMO_KEY)", 5],
+    ["NewsAPI", "https://newsapi.org", "Haber akışı, TR kaynaklar, 100 istek/gün", 3],
+  ] },
 ];
 
 // Açık veri kaynakları — çoğu key gerektirmez, referans listesi
@@ -200,7 +288,7 @@ export default function APIVault() {
 
   const catalogFiltered = CATALOG.map((c) => ({
     ...c,
-    items: c.items.filter(([n]) => !q || n.toLowerCase().includes(q.toLowerCase()) || c.c.toLowerCase().includes(q.toLowerCase())),
+    items: c.items.filter(([n, , d]) => !q || n.toLowerCase().includes(q.toLowerCase()) || (d || "").toLowerCase().includes(q.toLowerCase()) || c.c.toLowerCase().includes(q.toLowerCase())),
   })).filter((c) => c.items.length);
 
   const vaultFiltered = entries.filter((e) => !q || e.name.toLowerCase().includes(q.toLowerCase()) || e.env.toLowerCase().includes(q.toLowerCase()) || e.cat.toLowerCase().includes(q.toLowerCase()));
@@ -321,20 +409,43 @@ export default function APIVault() {
 
         {/* ---------- CATALOG ---------- */}
         {view === "catalog" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            <p style={{ fontFamily: mono, fontSize: 11.5, color: "#64748b", margin: 0, lineHeight: 1.6 }}>
+              // bir servise tıkla → kasana düşsün → key'ini orada gir. <span style={{ color: "#22c55e" }}>▮▮▮▮▮</span> = ücretsiz katman cömertliği
+            </p>
             {catalogFiltered.map((c) => (
               <div key={c.c}>
-                <div style={{ fontFamily: mono, fontSize: 11, color: c.hue, marginBottom: 8, letterSpacing: 0.5, display: "flex", alignItems: "center", gap: 7 }}>
+                <div style={{ fontFamily: mono, fontSize: 11.5, color: c.hue, marginBottom: 9, letterSpacing: 0.5, display: "flex", alignItems: "center", gap: 7 }}>
                   <span style={{ width: 6, height: 6, borderRadius: 99, background: c.hue }} /> {c.c}
+                  <span style={{ color: c.hue + "88", fontSize: 10 }}>{c.items.length}</span>
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                  {c.items.map(([n, url]) => {
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  {c.items.map(([n, url, d, gen]) => {
                     const inVault = entries.some((e) => e.env === toEnvVar(n));
                     return (
-                      <button key={n} onClick={() => addEntry(n, c.c, toEnvVar(n))} disabled={inVault}
-                        style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${inVault ? "#1a2334" : c.hue + "44"}`, background: inVault ? "#0c1018" : c.hue + "12", color: inVault ? "#334155" : "#e2e8f0", fontFamily: sans, fontSize: 12.5, cursor: inVault ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                        {inVault ? "✓ " : "+ "}{n}
-                      </button>
+                      <div key={n} style={{ position: "relative", background: "#0b0f18", borderRadius: 10, border: "1px solid #16202f", padding: "11px 14px 11px 16px" }}>
+                        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: c.hue, opacity: 0.5 }} />
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 4, flexWrap: "wrap" }}>
+                              <span style={{ fontWeight: 600, fontSize: 14, color: "#f1f5f9" }}>{n}</span>
+                              <span style={{ display: "inline-flex", gap: 2 }} title={`Cömertlik: ${gen}/5`}>
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                  <span key={i} style={{ width: 5, height: 11, borderRadius: 1, background: i <= gen ? c.hue : "#222b3a" }} />
+                                ))}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: 12.5, color: "#94a3b8", lineHeight: 1.5 }}>{d}</div>
+                          </div>
+                          <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                            <button onClick={() => addEntry(n, c.c, toEnvVar(n))} disabled={inVault}
+                              style={{ padding: "6px 12px", borderRadius: 7, border: `1px solid ${inVault ? "#1a2334" : c.hue + "55"}`, background: inVault ? "#0c1018" : c.hue + "16", color: inVault ? "#334155" : c.hue, fontFamily: mono, fontSize: 11, fontWeight: 600, cursor: inVault ? "default" : "pointer", whiteSpace: "nowrap" }}>
+                              {inVault ? "✓ kasada" : "+ kasaya"}
+                            </button>
+                            <a href={url} target="_blank" rel="noopener noreferrer" style={{ padding: "6px 10px", borderRadius: 7, background: "#121a28", color: "#64748b", fontFamily: mono, fontSize: 11, textDecoration: "none", border: "1px solid #1e2738", whiteSpace: "nowrap" }}>docs →</a>
+                          </div>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
