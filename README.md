@@ -34,12 +34,23 @@ Kasa şifreli olduğu için kalıcı düz metin `.env` tutulmaz. Diğer projeler
 
 **Gereksinimler:** Python 3.10+ · Node.js 18+
 
-### Tek komutla
+### Başlatma
+Proje dizininde terminalden şu komutu çalıştırmanız yeterlidir:
 ```bash
-chmod +x baslat.sh
 ./baslat.sh
 ```
-Tarayıcı: **http://localhost:5173** → ilk açılışta master parola belirlersin.
+*Not: `chmod +x baslat.sh` izin verme işlemi bir kez yapılmıştır, tekrar yapmanıza gerek yoktur.*
+
+Tarayıcıdan **http://localhost:5173** adresine giderek arayüze erişebilirsiniz. İlk açılışta bir master parola belirlersiniz.
+
+### Kapatma
+Terminal ekranında **`Ctrl + C`** tuşlarına basarak hem backend'i hem de frontend'i tek seferde güvenli bir şekilde kapatabilirsiniz.
+
+### ⚠️ Sorun Giderme (Port Çakışması)
+Eğer *"Address already in use / Port is in use"* hatası alırsanız (örneğin 8000 veya 5173 portları başka bir uygulama tarafından işgal edilmişse), arka planda kalan süreçleri temizlemek için şu komutu çalıştırıp ardından tekrar `./baslat.sh` yapabilirsiniz:
+```bash
+kill -9 $(lsof -t -i:8000 -i:5173) 2>/dev/null
+```
 
 ### Manuel
 ```bash
