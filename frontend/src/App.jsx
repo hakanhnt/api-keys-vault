@@ -111,6 +111,17 @@ const CATALOG = [
     ["Airtable", "https://airtable.com/developers", "Tablo+DB karışımı, hafif CRM/içerik", 3],
     ["GitHub API", "https://docs.github.com/rest", "Repo, issue, Actions tetikleme, 5.000/saat", 5],
   ] },
+  { c: "Web Scraping", hue: "#5eead4", items: [
+    ["Jina Reader", "https://jina.ai/reader", "r.jina.ai/<url> → temiz markdown, key yok, bedava", 5],
+    ["Firecrawl", "https://firecrawl.dev", "LLM-hazır crawl + scrape, markdown çıktı, 500 kredi/ay", 3],
+    ["Crawl4AI", "https://github.com/unclecode/crawl4ai", "Açık kaynak, self-host, LLM için temiz çıktı", 5],
+    ["ScraperAPI", "https://scraperapi.com", "Proxy rotation + JS render + anti-bot, 1.000/ay trial", 2],
+    ["ScrapingBee", "https://scrapingbee.com", "Headless render + proxy, 1.000 kredi deneme", 2],
+    ["Apify", "https://apify.com", "Hazır 'actor' marketplace, $5 ücretsiz kredi/ay", 3],
+    ["Browserless", "https://browserless.io", "Yönetilen headless Chrome, Puppeteer/Playwright", 2],
+    ["Serper.dev", "https://serper.dev", "Google arama sonuçları API'si, 2.500 ücretsiz kredi", 3],
+    ["ScrapingDog", "https://scrapingdog.com", "Proxy + render, ucuz, 1.000 istek deneme", 2],
+  ] },
   { c: "Açık Veri", hue: "#7dd3fc", items: [
     ["NASA", "https://api.nasa.gov", "Astronomi fotoğrafı, Mars, asteroit (DEMO_KEY)", 5],
     ["NewsAPI", "https://newsapi.org", "Haber akışı, TR kaynaklar, 100 istek/gün", 3],
