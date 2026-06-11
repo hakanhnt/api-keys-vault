@@ -16,3 +16,11 @@ frontend/dist/
 
 # OS
 .DS_Store
+
+# Electron & PyInstaller Build/Package Outputs
+dist/
+build/
+dist-desktop/
+node_modules/
+*.spec
+

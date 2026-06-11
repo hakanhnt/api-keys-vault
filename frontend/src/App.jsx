@@ -4,7 +4,7 @@ const AMBER = "#f5b942";
 const mono = "'JetBrains Mono','SF Mono',ui-monospace,monospace";
 const sans = "'Inter',system-ui,sans-serif";
 // Lokal FastAPI backend adresi
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.DEV ? "http://localhost:8000" : window.location.origin;
 
 // Hızlı ekleme için kompakt katalog (ad + docs)
 // Katalog — [ad, docs, kısa açıklama, ücretsiz katman cömertliği 1-5]

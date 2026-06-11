@@ -122,3 +122,32 @@ def export_env(body: ExportIn):
 @app.get("/api/health")
 def health():
     return {"ok": True, "vault_dir": str(core.VAULT_DIR)}
+
+
+import sys
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+# Serve React static files in production
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    # Running inside PyInstaller package
+    frontend_dist = Path(sys._MEIPASS) / "frontend" / "dist"
+else:
+    # Running in local python environment
+    frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+if frontend_dist.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="static")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    import argparse
+
+    parser = argparse.ArgumentParser(description="ANAHTAR://KASA Backend")
+    parser.add_argument("--host", default="127.0.0.1", help="Bind host")
+    parser.add_argument("--port", type=int, default=8000, help="Bind port")
+    args = parser.parse_args()
+
+    uvicorn.run(app, host=args.host, port=args.port)
+

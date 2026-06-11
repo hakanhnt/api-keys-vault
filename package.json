@@ -1,0 +1,41 @@
+{
+  "name": "api-keys-vault",
+  "version": "1.0.0",
+  "description": "ANAHTAR://KASA — Şifreli API ve Şifre Kasası",
+  "main": "main-desktop.js",
+  "scripts": {
+    "postinstall": "cd frontend && npm install",
+    "frontend:build": "npm run build --prefix frontend",
+    "backend:build": "./backend/.venv/bin/pyinstaller --clean --onefile --name apikasa-backend --add-data \"frontend/dist:frontend/dist\" backend/main.py",
+    "desktop:dev": "npm run frontend:build && electron .",
+    "desktop:build": "npm run frontend:build && npm run backend:build && electron-builder"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.apikasa.vault",
+    "productName": "ApiKasa",
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "files": [
+      "main-desktop.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist/apikasa-backend",
+        "to": "apikasa-backend"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "dmg"
+      ]
+    }
+  }
+}
