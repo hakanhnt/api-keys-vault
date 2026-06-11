@@ -218,6 +218,24 @@ uvicorn main:app --host 127.0.0.1 --port 8000
 cd frontend && npm install && npm run dev
 ```
 
+### 🖥️ Masaüstü Uygulaması (macOS)
+Uygulamayı tarayıcı yerine bağımsız bir masaüstü uygulaması olarak çalıştırmak ve paketlemek için:
+
+1. **Bağımlılıkları Yükleyin (Root dizininde):**
+   ```bash
+   npm install
+   ```
+2. **Geliştirme Modunda Çalıştırın:**
+   ```bash
+   npm run desktop:dev
+   ```
+   *Bu komut frontend'i derler, yerel python backend'inizi arka planda boş bir porta bağlayarak uygulamayı bağımsız bir Electron penceresinde açar.*
+3. **Bağımsız `.dmg` Paketi Üretin:**
+   ```bash
+   npm run desktop:build
+   ```
+   *Bu komut frontend'i derler, FastAPI backend'ini PyInstaller ile bağımsız çalıştırılabilir ikili (binary) haline getirir ve bunları tek bir macOS `dist-desktop/ApiKasa-1.0.0-arm64.dmg` yükleme kalıbı haline getirir.*
+
 ---
 
 ## ⌨️ CLI yoldaşı (apikasa)
@@ -503,6 +521,24 @@ uvicorn main:app --host 127.0.0.1 --port 8000
 # Frontend (separate terminal)
 cd frontend && npm install && npm run dev
 ```
+
+### 🖥️ Desktop Application (macOS)
+To run and package the application as a standalone desktop application instead of a web browser:
+
+1. **Install Dependencies (In the root directory):**
+   ```bash
+   npm install
+   ```
+2. **Run in Development Mode:**
+   ```bash
+   npm run desktop:dev
+   ```
+   *This command builds the frontend, starts the local python backend dynamically on a free port, and loads it in a standalone Electron window.*
+3. **Build Standalone macOS `.dmg` Package:**
+   ```bash
+   npm run desktop:build
+   ```
+   *This builds the frontend, compiles the FastAPI backend into a binary using PyInstaller, and packages them together into a macOS installer located at `dist-desktop/ApiKasa-1.0.0-arm64.dmg`.*
 
 ---
 
